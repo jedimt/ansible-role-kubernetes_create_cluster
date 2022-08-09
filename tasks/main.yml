@@ -1,14 +1,14 @@
 ---
 
 - name: Test for existing K8s cluster
-  ansible.builtin.shell: ls /etc/kubernetes/
+  ansible.builtin.command: ls /etc/kubernetes/
   register: dirtest
   changed_when: false
-  tags: 
+  tags:
     - kubeconfig
     - kubeadm
 
-# If you need to set any config for kubeadm. 
+# If you need to set any config for kubeadm.
 # - name: Build kubeadm-config.yaml file
 #   ansible.builtin.blockinfile:
 #     path: /tmp/kubeadm-config.yaml
@@ -20,31 +20,39 @@
 #       apiVersion: kubelet.config.k8s.io/v1beta1
 #       cgroupDriver: systemd
 #     create: yes
-#   tags: 
+#   tags:
 #     - kubeadm
 
-# - name: Kubeadm init 
+# - name: Kubeadm init
 #   ansible.builtin.shell: kubeadm init --config /tmp/kubeadm-config.yaml
 #   register: rslt
 #   when: "'admin.conf' not in dirtest.stdout"
 #   tags: kubeconfig
 
-- name: Kubeadm init 
-  ansible.builtin.shell: kubeadm init 
+- name: Kubeadm init
+  ansible.builtin.command: kubeadm init
   register: rslt
   when: "'admin.conf' not in dirtest.stdout"
   tags: kubeconfig
 
+# - name: Store init output
+#   action: copy content="{{ rslt.stdout }}" dest="/etc/kubernetes/kubeadm-init.stdout"
+#   when: "'admin.conf' not in dirtest.stdout"
+#   tags: kubeconfig
+
 - name: Store init output
-  action: copy content="{{ rslt.stdout }}" dest="/etc/kubernetes/kubeadm-init.stdout"
-  when: "'admin.conf' not in dirtest.stdout" 
-  changed_when: false      
+  ansible.builtin.copy:
+    content: "{{ rslt.stdout }}"
+    dest: "/etc/kubernetes/kubeadm-init.stdout"
+    mode: '644'
+  when: "'admin.conf' not in dirtest.stdout"
   tags: kubeconfig
 
 - name: Ensure .kube directory exists.
   ansible.builtin.file:
     path: /root/.kube
     state: directory
+    mode: '644'
 
 - name: Symlink the kubectl admin.conf to ~/.kube/conf.
   ansible.builtin.file:
@@ -56,19 +64,19 @@
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
     dest: /root/.kube/{{ inventory_hostname }}-config
-    flat: yes
+    flat: true
   when: local_user == "root"
-  tags: 
+  tags:
     - cpkubeconfig
 
 - name: Copy kubeconfig to local machine (non root user)
   ansible.builtin.fetch:
     src: /etc/kubernetes/admin.conf
     dest: ~/.kube/{{ inventory_hostname }}-config
-    flat: yes
+    flat: true
   when: local_user != "root"
   tags: cpkubeconfig
-  
+
 - name: Probe for existing Weave network installation
   ansible.builtin.shell:
     cmd: |
@@ -78,7 +86,9 @@
   tags: weave
 
 - name: Get Kubernetes version for Weave installation.
-  ansible.builtin.shell: kubectl version | base64 | tr -d '\n'
+  ansible.builtin.shell:
+    cmd: |
+      kubectl version | base64 | tr -d '\n'
   register: kubectl_version
   when: "'weave' not in weave_pods.stdout"
   changed_when: false
@@ -92,4 +102,3 @@
   changed_when: "'created' in weave_result.stdout"
   when: "'weave' not in weave_pods.stdout"
   tags: weave
-
