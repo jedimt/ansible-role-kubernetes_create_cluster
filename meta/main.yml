@@ -19,4 +19,4 @@ galaxy_info:
     - kubeadm
 
 dependencies:
-  - role: kubernetes_prep
+  - role: jedimt.kubernetes_prep
