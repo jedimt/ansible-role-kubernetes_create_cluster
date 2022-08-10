@@ -1,5 +1,6 @@
 galaxy_info:
-  author: Aaron Patten
+  author: jedimt
+  role_name: kubernetes_create_cluster
   description: Install Kubernetes cluster master
 
   license: MIT
@@ -13,8 +14,9 @@ galaxy_info:
         - xenial
         - jammy
 
-  galaxy_tags: 
+  galaxy_tags:
     - kubernetes
     - kubeadm
 
-dependencies: []
+dependencies:
+  - role: kubernetes_prep
