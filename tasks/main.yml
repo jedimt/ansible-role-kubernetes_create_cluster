@@ -1,4 +1,5 @@
 ---
+# tasks file for ansible-role-kubernetes-create-cluster
 
 - name: Test for existing K8s cluster
   ansible.builtin.command: ls /etc/kubernetes/
@@ -8,7 +9,7 @@
     - kubeconfig
     - kubeadm
 
-# If you need to set any config for kubeadm.
+# EXAMPLE: If you need to set any config for kubeadm startup
 # - name: Build kubeadm-config.yaml file
 #   ansible.builtin.blockinfile:
 #     path: /tmp/kubeadm-config.yaml
@@ -34,11 +35,6 @@
   register: rslt
   when: "'admin.conf' not in dirtest.stdout"
   tags: kubeconfig
-
-# - name: Store init output
-#   action: copy content="{{ rslt.stdout }}" dest="/etc/kubernetes/kubeadm-init.stdout"
-#   when: "'admin.conf' not in dirtest.stdout"
-#   tags: kubeconfig
 
 - name: Store init output
   ansible.builtin.copy:
@@ -76,29 +72,3 @@
     flat: true
   when: local_user != "root"
   tags: cpkubeconfig
-
-- name: Probe for existing Weave network installation
-  ansible.builtin.shell:
-    cmd: |
-      kubectl get pods -n kube-system -l name=weave-net
-  register: weave_pods
-  changed_when: false
-  tags: weave
-
-- name: Get Kubernetes version for Weave installation.
-  ansible.builtin.shell:
-    cmd: |
-      kubectl version | base64 | tr -d '\n'
-  register: kubectl_version
-  when: "'weave' not in weave_pods.stdout"
-  changed_when: false
-  tags: weave
-
-- name: Configure Weave networking.
-  ansible.builtin.command: "{{ item }}"
-  with_items:
-    - "kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version={{ kubectl_version.stdout_lines[0] }}"
-  register: weave_result
-  changed_when: "'created' in weave_result.stdout"
-  when: "'weave' not in weave_pods.stdout"
-  tags: weave
