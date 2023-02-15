@@ -2,3 +2,5 @@
 # Look up the local user running the playbook
 # This is required when copying the admin.conf file back to the local machine
 local_user: "{{ lookup('env', 'USER') }}"
+
+calico_url: "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"

@@ -72,3 +72,19 @@
     flat: true
   when: local_user != "root"
   tags: cpkubeconfig
+
+# Install Calico, cause Weave seems to have gone busted as of Nov 13th 2021
+- name: Test for existing Calico install
+  ansible.builtin.shell:
+    cmd: kubectl get crd | grep -o calico -m 1
+  register: calico_crd
+  failed_when: calico_crd.rc > 1
+  changed_when: false
+  tags: calico
+
+# URLs and install have changed in 2023
+- name: Download and apply the Calico CNI manifest
+  ansible.builtin.command:
+    kubectl apply -f "{{ calico_url }}"
+  when: "'calico' not in calico_crd.stdout"
+  tags: calico
