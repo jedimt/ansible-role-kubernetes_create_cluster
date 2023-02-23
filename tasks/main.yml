@@ -30,6 +30,7 @@
 #   when: "'admin.conf' not in dirtest.stdout"
 #   tags: kubeconfig
 
+# Run kubeadm init with no customization
 - name: Kubeadm init
   ansible.builtin.command: kubeadm init
   register: rslt
