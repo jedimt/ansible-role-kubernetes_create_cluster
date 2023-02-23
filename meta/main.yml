@@ -18,5 +18,5 @@ galaxy_info:
     - kubernetes
     - kubeadm
 
-# dependencies:
-#   - role: ansible-role-kubernetes-prep
+dependencies:
+  - role: ansible-role-kubernetes-prep
