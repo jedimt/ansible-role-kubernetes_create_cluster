@@ -31,10 +31,23 @@
 #   tags: kubeconfig
 
 # Run kubeadm init with no customization
-- name: Kubeadm init
+- name: Kubeadm init (single control node)
   ansible.builtin.command: kubeadm init
   register: rslt
-  when: "'admin.conf' not in dirtest.stdout"
+  when:
+    - "'admin.conf' not in dirtest.stdout"
+    - not hostvars[groups['k8s_master'][0]]['loadbalancer']
+  changed_when: true
+  tags: kubeconfig
+
+- name: Kubeadm init (multiple control nodes)
+  ansible.builtin.command:
+    kubeadm init --control-plane-endpoint {{ loadbalancer }} --upload-certs
+  register: rslt
+  when:
+    - "'admin.conf' not in dirtest.stdout"
+    - hostvars[groups['k8s_master'][0]]['loadbalancer']
+  changed_when: true
   tags: kubeconfig
 
 - name: Store init output
@@ -73,3 +86,89 @@
     flat: true
   when: local_user != "root"
   tags: cpkubeconfig
+
+- name: Generate join token for additional control nodes
+  ansible.builtin.command:
+    kubeadm token create --print-join-command
+  register: kubeadm_join_cmd
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  changed_when: false
+  tags: cert_key
+
+- name: Set fact for kubeadm_join
+  ansible.builtin.set_fact:
+    kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  tags: cert_key
+
+# Original workflow
+# - name: Generate control plane certificate key file
+#   ansible.builtin.shell:
+#     cmd: |
+#       kubeadm init phase upload-certs --upload-certs > /tmp/cert_key.txt
+#   register: cp_cert_key
+#   when: hostvars[groups['k8s_master'tailoadbalancer']
+#   tags:
+#     - cert_key
+#     - upload_cert
+
+# # May be able to eliminate this step by improving the previous task to include tailing the output
+# - name: Extract variable for cert key
+#   ansible.builtin.command:
+#     cmd: |
+#       tail -1 /tmp/cert_key.txt
+#   register: kubeadm_cert_key
+#   when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+#   changed_when: false
+#   tags:
+#     - upload_cert
+
+# - name: Set variable for cert key
+#   ansible.builtin.set_fact:
+#     kubeadm_cert_key: "{{ kubeadm_cert_key.stdout }}"
+#   when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+#   tags:
+#     - upload_cert
+
+# Improved workflow
+- name: Generate control plane certificate key file
+  ansible.builtin.shell:
+    cmd: |
+      kubeadm init phase upload-certs --upload-certs | tail -1
+  register: cp_cert_key
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  changed_when: false
+  tags:
+    - cert_key
+
+- name: Set variable for cert key
+  ansible.builtin.set_fact:
+    kubeadm_cert_key: "{{ cp_cert_key.stdout }}"
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  tags:
+    - cert_key
+
+# - name: Test to see if additional control nodes already joined to cluster
+#   ansible.builtin.command:
+#     ls /etc/kubernetes
+#   register: kubedirtest
+#   failed_when: kubedirtest.rc > 2
+#   when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+#   delegate_to: "{{ item }}"
+#   delegate_facts: true
+#   with_items: "{{ groups['k8s_control'] }}"
+#   changed_when: false
+#   tags: cert_key
+
+# - name: Run kubeadm join
+#   ansible.builtin.command:
+#     "{{ hostvars[groups['k8s_master'][0]]['kubeadm_join'] }} \
+#         --control-plane --certificate-key \
+#         {{ hostvars[groups['k8s_master'][0]]['kubeadm_cert_key'] }}"
+#   when:
+#     - "'pki' not in hostvars[groups['k8s_master'][0]]['kubedirtest'].stdout"
+#     - hostvars[groups['k8s_master'][0]]['loadbalancer']
+#   delegate_to: "{{ item }}"
+#   with_items: "{{ groups['k8s_control'] }}"
+#   changed_when: true
+#   tags: cert_key
