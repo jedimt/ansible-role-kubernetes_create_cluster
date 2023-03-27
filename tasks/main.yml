@@ -33,29 +33,41 @@
 # Run kubeadm init with no customization
 - name: Kubeadm init (single control node)
   ansible.builtin.command: kubeadm init
-  register: rslt
+  register: rslt_single
   when:
     - "'admin.conf' not in dirtest.stdout"
-    - not hostvars[groups['k8s_master'][0]]['loadbalancer']
+    - hostvars[groups['k8s_master'][0]]['loadbalancer'] is not defined
   changed_when: true
   tags: kubeconfig
 
 - name: Kubeadm init (multiple control nodes)
   ansible.builtin.command:
     kubeadm init --control-plane-endpoint {{ loadbalancer }} --upload-certs
-  register: rslt
+  register: rslt_multi
   when:
     - "'admin.conf' not in dirtest.stdout"
-    - hostvars[groups['k8s_master'][0]]['loadbalancer']
+    - hostvars[groups['k8s_master'][0]]['loadbalancer'] is defined
   changed_when: true
   tags: kubeconfig
 
-- name: Store init output
+- name: Store init output (single control node)
   ansible.builtin.copy:
-    content: "{{ rslt.stdout }}"
+    content: "{{ rslt_single.stdout }}"
     dest: "/etc/kubernetes/kubeadm-init.stdout"
     mode: '644'
-  when: "'admin.conf' not in dirtest.stdout"
+  when:
+    - "'admin.conf' not in dirtest.stdout"
+    - hostvars[groups['k8s_master'][0]]['loadbalancer'] is not defined
+  tags: kubeconfig
+
+- name: Store init output (multiple control nodes)
+  ansible.builtin.copy:
+    content: "{{ rslt_multi.stdout }}"
+    dest: "/etc/kubernetes/kubeadm-init.stdout"
+    mode: '644'
+  when:
+    - "'admin.conf' not in dirtest.stdout"
+    - hostvars[groups['k8s_master'][0]]['loadbalancer'] is defined
   tags: kubeconfig
 
 - name: Ensure .kube directory exists.
@@ -91,14 +103,14 @@
   ansible.builtin.command:
     kubeadm token create --print-join-command
   register: kubeadm_join_cmd
-  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer'] is defined
   changed_when: false
   tags: cert_key
 
 - name: Set fact for kubeadm_join
   ansible.builtin.set_fact:
     kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
-  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer'] is defined
   tags: cert_key
 
 # Original workflow
@@ -136,7 +148,7 @@
     cmd: |
       kubeadm init phase upload-certs --upload-certs | tail -1
   register: cp_cert_key
-  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer'] is defined
   changed_when: false
   tags:
     - cert_key
@@ -144,7 +156,7 @@
 - name: Set variable for cert key
   ansible.builtin.set_fact:
     kubeadm_cert_key: "{{ cp_cert_key.stdout }}"
-  when: hostvars[groups['k8s_master'][0]]['loadbalancer']
+  when: hostvars[groups['k8s_master'][0]]['loadbalancer'] is defined
   tags:
     - cert_key
 
