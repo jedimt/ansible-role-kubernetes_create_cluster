@@ -1,4 +1,6 @@
 ---
+# vars file for jedmit.kubernetes_create_cluster
+
 # Look up the local user running the playbook
 # This is required when copying the admin.conf file back to the local machine
 local_user: "{{ lookup('env', 'USER') }}"

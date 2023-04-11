@@ -1,5 +1,5 @@
 ---
-# tasks file for ansible-role-kubernetes-create-cluster
+# tasks file for jedmit.kubernetes_create_cluster
 
 - name: Test for existing K8s cluster
   ansible.builtin.command: ls /etc/kubernetes/

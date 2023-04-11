@@ -16,24 +16,24 @@ None
 Dependencies
 ------------
 
-This playbook depends on the `jedimt.ansible-role-kubernetes-prep` role having been executed on the hosts prior to running.
+This playbook depends on the `jedimt.kubernetes_prep` role having been executed on the hosts prior to running.
 
 Example Playbook
 ----------------
 
-        # ===========================================================================
-        # Create Kubernetes cluster
-        # ===========================================================================
-        - name: Create Kubernetes cluster
-          hosts: k8s_master
-          tags: play_create_k8s_cluster
+    # ===========================================================================
+    # Create Kubernetes cluster
+    # ===========================================================================
+    - name: Create Kubernetes cluster
+      hosts: k8s_master
+      tags: play_create_k8s_cluster
 
-        vars_files:
-          # Ansible vault with all required passwords
-          - "../../credentials.yml"
+      vars_files:
+        # Ansible vault with all required passwords
+        - "../../credentials.yml"
 
-        roles:
-          - ansible-role-kubernetes-create-cluster
+      roles:
+        - jedmit.kubernetes_create_cluster
 
 License
 -------
